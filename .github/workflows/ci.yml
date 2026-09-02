@@ -1,0 +1,21 @@
+# Runs on every push and pull request once this directory is its own
+# repository (see the parent repo's MIGRATION.md). Compiles and runs the
+# unit tests. No API keys are needed — tests never touch the network.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: mvn -B -q verify

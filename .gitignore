@@ -1,0 +1,28 @@
+# --- Secrets: never commit ---
+config.properties
+*.key
+.env
+
+# --- Runtime data written by the app (local to each user; may contain PII) ---
+projects/
+panelists.json
+agents.json
+context.txt
+*.log
+
+# --- Build output ---
+target/
+bin/
+*.class
+
+# --- IDE ---
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+
+# --- OS ---
+.DS_Store
+Thumbs.db

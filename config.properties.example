@@ -1,0 +1,42 @@
+# Conductor configuration.
+# Copy this file to config.properties (which is gitignored) and fill in your keys.
+# NEVER commit config.properties.
+
+# --- Anthropic (Claude) ---------------------------------------------------
+# Get a key: https://console.anthropic.com/settings/keys
+anthropic.key=YOUR_ANTHROPIC_KEY_HERE
+#anthropic.model=claude-opus-5
+#anthropic.url=https://api.anthropic.com
+
+# --- OpenAI (GPT) ---------------------------------------------------------
+# Get a key: https://platform.openai.com/api-keys
+openai.key=YOUR_OPENAI_KEY_HERE
+#openai.model=gpt-5.4-mini
+#openai.url=https://api.openai.com/v1/chat/completions
+
+# --- Google (Gemini) ------------------------------------------------------
+# Get a key: https://aistudio.google.com/apikey
+gemini.key=YOUR_GEMINI_KEY_HERE
+#gemini.model=gemini-3.1-pro-preview
+
+# --- OpenClaw (optional, self-hosted agent gateway) -----------------------
+# OpenClaw joins the panel as a fourth seat when openclaw.base.url is set.
+# Conductor talks to the gateway's OpenAI-compatible endpoint:
+#   POST {openclaw.base.url}/v1/chat/completions
+# That endpoint is OFF by default in OpenClaw; enable it in the gateway's
+# own config before turning this on.
+#
+#   openclaw.base.url  where the gateway listens (default http://localhost:18789)
+#   openclaw.token     the gateway's bearer token, if it requires one
+#   openclaw.agent.id  which agent answers; routed as model "openclaw/<agent id>"
+#                      (default "default")
+#
+#openclaw.base.url=http://localhost:18789
+#openclaw.token=
+#openclaw.agent.id=default
+
+# --- Debate tuning --------------------------------------------------------
+# Max tokens each agent may return per call (keep <= 16000 for non-streaming).
+#max.tokens=16000
+# How many rounds of cross-reaction between the independent answers and the synthesis.
+#debate.rounds=1
