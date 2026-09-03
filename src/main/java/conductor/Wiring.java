@@ -66,6 +66,6 @@ public final class Wiring {
 
     public StageRunner runner(List<Panelist> panelists, String orgContext) {
         Panel panel = new Panel(panelClients(), panelists, config.debateRounds(), config.maxTokens());
-        return new StageRunner(panel, lead(), openclawOrNull(), config.maxTokens(), orgContext);
+        return new StageRunner(panel, lead(), openclawOrNull(), config.maxTokens(), orgContext, PROJECTS_DIR);
     }
 }

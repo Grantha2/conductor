@@ -3,7 +3,9 @@ package conductor.sdlc;
 import conductor.panel.Panel;
 import conductor.panel.Panelist;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,6 +13,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Stage semantics with scripted clients: which stages call whom, how often, and how failures read. */
 class StageRunnerTest {
+
+    @TempDir
+    Path projectsDir;
 
     private static final String PLAN_JSON = """
             {"tasks":[
@@ -30,8 +35,8 @@ class StageRunnerTest {
         return new Panel(List.of(a, b), List.of(new Panelist("A", "pa", "la"), new Panelist("B", "pb", "lb")), 1, 500);
     }
 
-    private static StageRunner runner(FakeClient lead, FakeClient other) {
-        return new StageRunner(panel(lead, other), lead, null, 500, "");
+    private StageRunner runner(FakeClient lead, FakeClient other) {
+        return new StageRunner(panel(lead, other), lead, null, 500, "", projectsDir);
     }
 
     @Test
@@ -80,7 +85,7 @@ class StageRunnerTest {
         FakeClient other = new FakeClient("other", "other says");
         Panel panel = panel(lead, other);
         List<String> kinds = new ArrayList<>();
-        StageRunner r = new StageRunner(panel, lead, null, 500, "Org: Acme Gardens");
+        StageRunner r = new StageRunner(panel, lead, null, 500, "Org: Acme Gardens", projectsDir);
         String art = r.complete(project(), Stage.REQUIREMENTS, (kind, who, text) -> kinds.add(kind));
 
         assertEquals(5, lead.sent.size() + other.sent.size());          // 2 openers + 2 reactions + 1 synthesis
@@ -142,7 +147,7 @@ class StageRunnerTest {
         assertTrue(runner(lead, other).handOffToOpenClaw(p).contains("not configured"));
 
         FakeClient claw = new FakeClient("openclaw", "On it.");
-        StageRunner r = new StageRunner(panel(lead, other), lead, claw, 500, "");
+        StageRunner r = new StageRunner(panel(lead, other), lead, claw, 500, "", projectsDir);
         assertTrue(r.handOffToOpenClaw(p).contains("Complete the Build stage first"));
         assertEquals(0, claw.sent.size());
         p.setArtifact(Stage.BUILD, "the brief");

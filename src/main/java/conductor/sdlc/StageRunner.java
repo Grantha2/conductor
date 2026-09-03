@@ -6,16 +6,26 @@ import conductor.agents.AgentResponse;
 import conductor.agents.ChatMessage;
 import conductor.panel.Panel;
 
+import java.nio.file.Path;
 import java.util.List;
 
 /**
  * What happens when a stage is completed. Most stages are pure Java over the
  * user's answers; REQUIREMENTS and DESIGN run the debate panel; PLAN, BUILD
- * and (optionally) VERIFY make exactly one lead call. Every agent failure is
+ * and (optionally) VERIFY make one or more lead calls. Every agent failure is
  * folded into the artifact as readable text, so completing a stage can never
  * throw at the user.
+ *
+ * <p>Lead calls (plan, build, verify, assist) run as a stateful, multi-turn
+ * agent: the lead can call {@link ProjectFileExecutor}'s file tools to read
+ * and write files in the project's own workspace directory before giving its
+ * final answer. The debate panel stays one-shot per call by design — three
+ * competing perspectives, not one agent working a task.
  */
 public final class StageRunner {
+
+    /** Tool-use turns per lead call before giving up; generous because a real task may need a few reads and writes. */
+    private static final int MAX_TOOL_ITERATIONS = 8;
 
     private static final String REQ_Q = "Draft the requirements for this project as three lists: MUST have, "
             + "SHOULD have, must NEVER do. Be concrete and testable.";
@@ -37,13 +47,16 @@ public final class StageRunner {
     private final AgentClient openclaw;     // null when no gateway is configured
     private final int maxTokens;
     private final String orgContext;
+    private final Path projectsDir;
 
-    public StageRunner(Panel panel, AgentClient lead, AgentClient openclawOrNull, int maxTokens, String orgContext) {
+    public StageRunner(Panel panel, AgentClient lead, AgentClient openclawOrNull, int maxTokens, String orgContext,
+                        Path projectsDir) {
         this.panel = panel;
         this.lead = lead;
         this.openclaw = openclawOrNull;
         this.maxTokens = maxTokens;
         this.orgContext = orgContext == null ? "" : orgContext.strip();
+        this.projectsDir = projectsDir;
     }
 
     /** API calls {@link #complete} will make for this stage; shown to the user before they commit. */
@@ -63,8 +76,8 @@ public final class StageRunner {
             case IDEA, USERS -> summary(p, s);
             case REQUIREMENTS -> debate(ctx, REQ_Q, listener);
             case DESIGN -> debate(ctx, DESIGN_Q, listener);
-            case PLAN -> plan(ctx, listener);
-            case BUILD -> ask(ctx, BUILD_Q, listener);
+            case PLAN -> plan(p, ctx, listener);
+            case BUILD -> ask(p, ctx, BUILD_Q, listener);
             case VERIFY -> verify(p, ctx, listener);
             case SHIP -> releaseNotes(p);
         };
@@ -77,7 +90,7 @@ public final class StageRunner {
                 + "\n(" + q.help() + ")\n\nTheir draft answer:\n\n" + (draft.isBlank() ? "(nothing yet)" : draft)
                 + "\n\nSharpen and expand it in the user's own voice: concrete, plain language, no jargon, "
                 + "at most 120 words. Reply with the improved answer only.";
-        AgentResponse r = send(lead, AgentRequest.text(systemContext(p), List.of(ChatMessage.user(prompt)), maxTokens));
+        AgentResponse r = runLead(p, AgentRequest.text(systemContext(p), List.of(ChatMessage.user(prompt)), maxTokens));
         return r.ok() ? r.text().strip() : draft + "\n[assist unavailable: " + r.error() + "]";
     }
 
@@ -105,9 +118,9 @@ public final class StageRunner {
         }
     }
 
-    private String plan(String ctx, Panel.Listener listener) {
+    private String plan(Project p, String ctx, Panel.Listener listener) {
         status(listener, "Asking " + lead.modelName() + " for a task plan...");
-        AgentResponse r = send(lead, AgentRequest.json(ctx, List.of(ChatMessage.user(PLAN_Q)), PlanFormat.SCHEMA, maxTokens));
+        AgentResponse r = runLead(p, AgentRequest.json(ctx, List.of(ChatMessage.user(PLAN_Q)), PlanFormat.SCHEMA, maxTokens));
         return r.ok() ? PlanFormat.artifact(r.text()) : "[lead unavailable: " + r.error() + "]";
     }
 
@@ -119,7 +132,7 @@ public final class StageRunner {
         String answers = ProjectContext.renderStage(p, Stage.VERIFY);
         if (!answers.isBlank()) sb.append("\n## How we will check\n\n").append(answers);
         if (!p.answer("verify.how").isBlank()) {
-            sb.append("\n## Suggested checks\n\n").append(ask(ctx, VERIFY_Q, listener)).append('\n');
+            sb.append("\n## Suggested checks\n\n").append(ask(p, ctx, VERIFY_Q, listener)).append('\n');
         }
         return sb.toString();
     }
@@ -144,10 +157,27 @@ public final class StageRunner {
         return (orgContext.isBlank() ? "" : orgContext + "\n\n") + ProjectContext.render(p) + "\n";
     }
 
-    private String ask(String ctx, String prompt, Panel.Listener listener) {
+    private String ask(Project p, String ctx, String prompt, Panel.Listener listener) {
         status(listener, "Asking " + lead.modelName() + "...");
-        AgentResponse r = send(lead, AgentRequest.text(ctx, List.of(ChatMessage.user(prompt)), maxTokens));
+        AgentResponse r = runLead(p, AgentRequest.text(ctx, List.of(ChatMessage.user(prompt)), maxTokens));
         return r.ok() ? r.text() : "[lead unavailable: " + r.error() + "]";
+    }
+
+    /**
+     * Runs one lead call as a stateful tool-use agent: {@code request} is
+     * given the project's file tools, and {@link AgentClient#run} lets the
+     * lead read and write files in the project workspace across as many
+     * turns as it needs before its final answer.
+     */
+    private AgentResponse runLead(Project p, AgentRequest request) {
+        try {
+            var withTools = new AgentRequest(request.system(), request.messages(),
+                    ProjectFileExecutor.TOOLS, request.outputSchema(), request.maxTokens());
+            var executor = new ProjectFileExecutor(projectsDir.resolve(p.slug()).resolve("workspace"));
+            return lead.run(withTools, executor, MAX_TOOL_ITERATIONS);
+        } catch (RuntimeException e) {
+            return AgentResponse.error(e.toString());
+        }
     }
 
     /** Clients promise not to throw, but a bug in one must still not take the stage down. */
