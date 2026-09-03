@@ -11,6 +11,22 @@ a design, a task plan with machine-readable JSON, a build brief, a verification 
 release notes - precise enough to hand to an engineering agent (an OpenClaw agent, Claude
 Code) or a human team. The user never writes a prompt and never sees an API key.
 
+**Why it exists.** Every agentic coding tool in 2026 assumes its user already knows what to
+build and how to ask for it. Claude Code, Cursor, and Replit serve engineers. Conductor's
+premise is that the software development lifecycle itself, walked deterministically with
+plain-language questions, is the scaffolding a non-engineer needs, and that agents should be
+called only at the two or three points where a second opinion is worth its cost. It came out
+of the same "AI Collab" codebase as `debate-engine` (the panel debate is a sibling of that
+engine) and `cowork-suite`.
+
+**Status (September 2026).** Parked. Working and usable, but no feature work until the
+flagship (`cowork-suite`) ships its Phase 1. This cycle's only work is a read-only audit into
+`DEBT-INVENTORY.md`. See `DECISIONS.md` for the reasoning and the revisit triggers.
+
+> **Before changing code:** run the audit session (Template 1 in
+> `docs/agentic-prompt-playbook.md`) and fill `DEBT-INVENTORY.md`. Do not fix debt in a repo
+> that is not being developed; the inventory is a record for when development resumes.
+
 ## Quick start
 
 Prerequisites: Java 21 and Maven.
