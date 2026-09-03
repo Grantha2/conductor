@@ -25,6 +25,7 @@ Run this first, once per repo. It should cost a few dollars, not sixty.
 
 ```
 REPO: [name]
+BRANCH: [exact branch name, usually main]
 MODE: Read-only. Do not modify, create, or delete any file except the
 single output document named below.
 
@@ -113,7 +114,8 @@ For moving toward the new vision (Spring, database, the memory layer). Same shap
 ```
 REPO: [name]
 BRANCH: [exact branch name]
-CONTEXT: Read DEBT-INVENTORY.md and ARCHITECTURE.md first.
+CONTEXT: Read DEBT-INVENTORY.md first; its section 1 is the architecture
+map. Also read ARCHITECTURE.md or docs/architecture.md if the repo has one.
 
 GOAL: [one migration step, e.g. "move config loading from properties
 files to Spring @ConfigurationProperties"]
@@ -166,7 +168,7 @@ Keep these in each repo. Every session reads them instead of rediscovering.
 | File | What it holds | Who writes it |
 |---|---|---|
 | `DEBT-INVENTORY.md` | The audit output | Agent, once |
-| `ARCHITECTURE.md` | Module map, what talks to what | Agent during audit, you maintain |
+| `ARCHITECTURE.md` | Module map, what talks to what. Optional: the audit writes this map as section 1 of `DEBT-INVENTORY.md`; split it into its own file only when it must outlive the inventory | Seeded from the audit, you maintain |
 | `CLAUDE.md` | Conventions, build commands, what not to touch | You, by hand, short |
 | `DECISIONS.md` | Why things are the way they are | You, one line per decision |
 
